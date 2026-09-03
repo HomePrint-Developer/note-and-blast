@@ -1,0 +1,295 @@
+<!DOCTYPE html>
+<html lang="id">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Notepad Firebase</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Tambahan FontAwesome untuk Icon -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+</head>
+
+<body class="bg-gray-50 min-h-screen relative pb-24 font-sans text-gray-800">
+
+    <!-- Kontainer Daftar Catatan -->
+    <div class="max-w-2xl mx-auto p-4 pt-8">
+        <h1 class="text-3xl font-bold text-center mb-8 text-blue-600">Daftar Catatan</h1>
+
+        <!-- Area List Catatan -->
+        <div id="notesContainer" class="grid grid-cols-1 gap-4">
+            <p id="loadingText" class="text-center text-gray-500 animate-pulse">Memuat catatan dari Firebase...</p>
+        </div>
+    </div>
+
+    <!-- Tombol WhatsApp Mengambang (Pojok Kanan Bawah) -->
+    <a href="apichat.html"
+        class="fixed bottom-24 right-6 bg-green-500 hover:bg-green-600 text-white w-14 h-14 rounded-full shadow-lg hover:shadow-2xl flex items-center justify-center text-3xl transition-transform transform hover:scale-110 z-40"
+        title="Buka Chat WhatsApp">
+        <i class="fa-brands fa-whatsapp"></i>
+    </a>
+
+    <!-- Tombol Fixed di Bawah Layar -->
+    <div
+        class="fixed bottom-0 left-0 w-full p-4 bg-white/80 backdrop-blur-sm border-t border-gray-200 flex justify-center shadow-[0_-4px_6px_-1px_rgba(0,0,0,0.05)] z-30">
+        <button id="btnOpenModal"
+            class="bg-blue-600 hover:bg-blue-700 text-white font-bold py-3 px-8 rounded-full shadow-lg transition duration-200 w-full max-w-sm flex justify-center items-center gap-2">
+            <i class="fas fa-plus"></i> Tambah Catatan
+        </button>
+    </div>
+
+    <!-- Pop-up / Modal Utama -->
+    <div id="noteModal"
+        class="fixed inset-0 bg-black/60 hidden flex items-center justify-center p-4 z-50 backdrop-blur-sm transition-opacity">
+
+        <!-- Wrapper untuk menyandingkan Modal dan Tombol Vertikal -->
+        <div class="flex flex-row items-stretch gap-3 w-full max-w-lg pointer-events-none">
+
+            <!-- Kotak Konten Modal -->
+            <div class="bg-white rounded-xl w-full p-6 shadow-2xl flex-grow pointer-events-auto flex flex-col">
+                <h2 id="modalTitle" class="text-xl font-bold mb-4 text-gray-800">Catatan Baru</h2>
+
+                <textarea id="noteText" rows="8"
+                    class="w-full flex-grow border border-gray-300 rounded-lg p-4 mb-4 focus:outline-none focus:ring-2 focus:ring-blue-500 resize-none text-gray-700 bg-gray-50"
+                    placeholder="Ketik catatanmu di sini..."></textarea>
+
+                <!-- Footer khusus untuk Tambah Catatan (Batal / Simpan) -->
+                <div id="addNoteFooter" class="flex justify-end space-x-3">
+                    <button id="btnCancelAdd"
+                        class="px-5 py-2.5 text-gray-600 font-medium hover:bg-gray-100 rounded-lg transition">Batal</button>
+                    <button id="btnSaveAdd"
+                        class="px-5 py-2.5 bg-blue-600 hover:bg-blue-700 text-white font-medium rounded-lg shadow transition">Simpan</button>
+                </div>
+            </div>
+
+            <!-- Tombol Aksi Vertikal (Edit, Delete, Save Edit) -->
+            <div id="sideActionButtons" class="hidden flex-col gap-3 pointer-events-auto pt-2">
+                <!-- Group Edit & Delete -->
+                <div id="viewModeButtons" class="flex flex-col gap-3">
+                    <button id="btnEditSide"
+                        class="bg-blue-500 text-white w-12 h-12 rounded-full shadow-lg hover:bg-blue-600 transition flex items-center justify-center text-lg"
+                        title="Edit">
+                        <i class="fas fa-pencil"></i>
+                    </button>
+                    <button id="btnDeleteSide"
+                        class="bg-red-500 text-white w-12 h-12 rounded-full shadow-lg hover:bg-red-600 transition flex items-center justify-center text-lg"
+                        title="Hapus">
+                        <i class="fas fa-trash"></i>
+                    </button>
+                </div>
+                <!-- Tombol Save Edit -->
+                <button id="btnSaveEditSide"
+                    class="hidden bg-green-500 text-white w-12 h-12 rounded-full shadow-lg hover:bg-green-600 transition flex items-center justify-center text-xl"
+                    title="Simpan Perubahan">
+                    <i class="fas fa-save"></i>
+                </button>
+            </div>
+
+        </div>
+    </div>
+
+    <!-- Konfigurasi Firebase Module -->
+    <script type="module">
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/12.18.0/firebase-app.js";
+        import { getAnalytics } from "https://www.gstatic.com/firebasejs/12.18.0/firebase-analytics.js";
+        import { getDatabase, ref, get, set, child, remove } from "https://www.gstatic.com/firebasejs/12.18.0/firebase-database.js";
+
+        const firebaseConfig = {
+            apiKey: "AIzaSyDgVPayvFN90iLQWqnK_WFvK6jLYCos4dM",
+            authDomain: "my-project-8c72b.firebaseapp.com",
+            databaseURL: "https://my-project-8c72b-default-rtdb.firebaseio.com",
+            projectId: "my-project-8c72b",
+            storageBucket: "my-project-8c72b.firebasestorage.app",
+            messagingSenderId: "499858126691",
+            appId: "1:499858126691:web:a4137060333433ddbb4556",
+            measurementId: "G-BVJRL5QF8D"
+        };
+
+        const app = initializeApp(firebaseConfig);
+        const analytics = getAnalytics(app);
+        const db = getDatabase(app);
+
+        // Deklarasi Elemen DOM
+        const notesContainer = document.getElementById('notesContainer');
+        const noteModal = document.getElementById('noteModal');
+        const noteText = document.getElementById('noteText');
+        const modalTitle = document.getElementById('modalTitle');
+
+        // Element Tombol
+        const btnOpenModal = document.getElementById('btnOpenModal');
+        const addNoteFooter = document.getElementById('addNoteFooter');
+        const btnCancelAdd = document.getElementById('btnCancelAdd');
+        const btnSaveAdd = document.getElementById('btnSaveAdd');
+
+        // Element Aksi Samping
+        const sideActionButtons = document.getElementById('sideActionButtons');
+        const viewModeButtons = document.getElementById('viewModeButtons');
+        const btnEditSide = document.getElementById('btnEditSide');
+        const btnDeleteSide = document.getElementById('btnDeleteSide');
+        const btnSaveEditSide = document.getElementById('btnSaveEditSide');
+
+        let nextIndex = 1;
+        let currentActiveKey = null;
+
+        // ==========================================
+        // FUNGSI MENGAMBIL DAN MENAMPILKAN DATA
+        // ==========================================
+        async function fetchNotes() {
+            try {
+                const dbRef = ref(db);
+                const snapshot = await get(child(dbRef, 'notepad'));
+                notesContainer.innerHTML = '';
+
+                if (snapshot.exists()) {
+                    const data = snapshot.val();
+                    let maxNum = 0;
+
+                    for (const key in data) {
+                        if (key.startsWith('note')) {
+                            const num = parseInt(key.replace('note', ''));
+                            if (!isNaN(num) && num > maxNum) maxNum = num;
+
+                            const textValue = data[key].text || '';
+
+                            const noteCard = document.createElement('div');
+                            noteCard.className = 'bg-white p-5 rounded-xl shadow-sm border border-gray-100 hover:shadow-md cursor-pointer transition';
+                            noteCard.innerHTML = `
+                                <div class="text-xs text-blue-500 font-semibold mb-2 uppercase tracking-wide">#${key}</div>
+                                <p class="text-gray-700 whitespace-pre-wrap line-clamp-3">${textValue}</p>
+                            `;
+
+                            noteCard.addEventListener('click', () => {
+                                openViewMode(key, textValue);
+                            });
+
+                            notesContainer.appendChild(noteCard);
+                        }
+                    }
+                    nextIndex = maxNum + 1;
+                } else {
+                    notesContainer.innerHTML = '<p class="text-gray-500 text-center">Belum ada catatan.</p>';
+                    nextIndex = 1;
+                }
+            } catch (error) {
+                console.error(error);
+                notesContainer.innerHTML = '<p class="text-red-500 text-center">Gagal memuat catatan.</p>';
+            }
+        }
+
+        // ==========================================
+        // MANAJEMEN MODAL DAN STATE
+        // ==========================================
+
+        function closeModal() {
+            noteModal.classList.add('hidden');
+            noteText.value = '';
+            currentActiveKey = null;
+        }
+
+        function openAddMode() {
+            modalTitle.innerText = "Catatan Baru";
+            noteText.value = '';
+            noteText.readOnly = false;
+            noteText.classList.remove('bg-gray-100', 'cursor-not-allowed');
+
+            addNoteFooter.classList.remove('hidden');
+            sideActionButtons.classList.add('hidden');
+
+            noteModal.classList.remove('hidden');
+            noteText.focus();
+        }
+
+        function openViewMode(key, text) {
+            currentActiveKey = key;
+            modalTitle.innerText = "Lihat Catatan";
+            noteText.value = text;
+            noteText.readOnly = true;
+            noteText.classList.add('bg-gray-100', 'cursor-not-allowed');
+
+            addNoteFooter.classList.add('hidden');
+            sideActionButtons.classList.remove('hidden');
+            sideActionButtons.classList.add('flex');
+
+            viewModeButtons.classList.remove('hidden');
+            btnSaveEditSide.classList.add('hidden');
+
+            noteModal.classList.remove('hidden');
+        }
+
+        function enableEditMode() {
+            modalTitle.innerText = "Edit Catatan";
+            noteText.readOnly = false;
+            noteText.classList.remove('bg-gray-100', 'cursor-not-allowed');
+
+            viewModeButtons.classList.add('hidden');
+            btnSaveEditSide.classList.remove('hidden');
+
+            noteText.focus();
+        }
+
+        // ==========================================
+        // EVENT LISTENERS
+        // ==========================================
+
+        noteModal.addEventListener('click', (e) => {
+            if (e.target === noteModal) {
+                closeModal();
+            }
+        });
+
+        btnOpenModal.addEventListener('click', openAddMode);
+        btnCancelAdd.addEventListener('click', closeModal);
+
+        btnSaveAdd.addEventListener('click', async () => {
+            const content = noteText.value.trim();
+            if (!content) return alert('Catatan kosong!');
+
+            btnSaveAdd.innerText = 'Menyimpan...';
+            try {
+                const newNoteKey = 'note' + nextIndex;
+                await set(ref(db, 'notepad/' + newNoteKey), { text: content });
+                closeModal();
+                fetchNotes();
+            } catch (error) {
+                alert('Gagal menyimpan catatan.');
+            } finally {
+                btnSaveAdd.innerText = 'Simpan';
+            }
+        });
+
+        btnEditSide.addEventListener('click', enableEditMode);
+
+        btnSaveEditSide.addEventListener('click', async () => {
+            const content = noteText.value.trim();
+            if (!content) return alert('Catatan tidak boleh kosong!');
+
+            btnSaveEditSide.innerHTML = '<i class="fas fa-spinner fa-spin"></i>';
+            try {
+                await set(ref(db, 'notepad/' + currentActiveKey), { text: content });
+                closeModal();
+                fetchNotes();
+            } catch (error) {
+                alert('Gagal memperbarui catatan.');
+            } finally {
+                btnSaveEditSide.innerHTML = '<i class="fas fa-save"></i>';
+            }
+        });
+
+        btnDeleteSide.addEventListener('click', async () => {
+            if (confirm("Yakin ingin menghapus catatan ini?")) {
+                try {
+                    await remove(ref(db, 'notepad/' + currentActiveKey));
+                    closeModal();
+                    fetchNotes();
+                } catch (error) {
+                    alert('Gagal menghapus catatan.');
+                }
+            }
+        });
+
+        // Init
+        fetchNotes();
+    </script>
+</body>
+
+</html>

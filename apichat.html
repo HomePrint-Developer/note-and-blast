@@ -4,7 +4,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Kirim Pesan WhatsApp</title>
+    <title>Kirim Pesan WhatsApp (Massal)</title>
     <script src="https://cdn.tailwindcss.com"></script>
 </head>
 
@@ -23,25 +23,23 @@
 
             <div>
                 <label for="phone" class="block text-sm font-medium text-gray-700 mb-1">Nomor Handphone</label>
-                <input type="text" id="phone" name="phone" required minlength="11" placeholder="Contoh: 085754207467"
-                    class="block w-full p-3 border border-gray-300 rounded-md focus:ring-green-500 focus:border-green-500 outline-none transition"
-                    oninput="this.value = this.value.replace(/[^0-9]/g, '')">
-                <p class="mt-1 text-xs text-gray-500">Hanya angka. Minimal 11 digit.</p>
+                <!-- Input diubah menjadi textarea agar bisa menerima banyak nomor -->
+                <textarea id="phone" name="phone" rows="4" required
+                    placeholder="085754207467&#10;081234567890&#10;(Pisahkan dengan Enter atau Koma jika ingin mengirim ke banyak nomor)"
+                    class="block w-full p-3 border border-gray-300 rounded-md focus:ring-green-500 focus:border-green-500 outline-none transition"></textarea>
+                <p class="mt-1 text-xs text-gray-500">Masukkan satu atau banyak nomor. Minimal 11 digit per nomor.</p>
             </div>
 
-            <button type="submit"
+            <button type="submit" id="submitBtn"
                 class="w-full bg-green-500 text-white font-bold py-3 px-4 rounded-md hover:bg-green-600 focus:outline-none focus:ring-2 focus:ring-green-500 focus:ring-offset-2 transition duration-200 mt-4">
-                Lanjut ke WhatsApp
+                Kirim ke WhatsApp
             </button>
-
+            
             <!-- Link Kembali ke Notepad -->
             <div class="text-center mt-4">
-                <a href="index.html"
-                    class="text-sm text-blue-500 hover:text-blue-700 hover:underline transition duration-150 flex items-center justify-center gap-1">
-                    <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24"
-                        stroke="currentColor">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                            d="M10 19l-7-7m0 0l7-7m-7 7h18" />
+                <a href="index.html" class="text-sm text-blue-500 hover:text-blue-700 hover:underline transition duration-150 flex items-center justify-center gap-1">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 19l-7-7m0 0l7-7m-7 7h18" />
                     </svg>
                     Kembali ke Notepad
                 </a>
@@ -51,31 +49,50 @@
 
     <script>
         document.getElementById('waForm').addEventListener('submit', function (e) {
-            // Mencegah form melakukan reload halaman bawaan
             e.preventDefault();
 
-            let phone = document.getElementById('phone').value;
+            let phoneInput = document.getElementById('phone').value;
             let message = document.getElementById('message').value;
 
-            // Validasi JavaScript tambahan untuk memastikan minimal 11 digit
-            if (phone.length < 11) {
-                alert('Nomor handphone kurang lengkap (minimal 11 angka).');
+            // Memisahkan teks berdasarkan baris baru (Enter) atau Koma
+            // Kemudian membersihkan karakter selain angka, dan membuang yang kosong atau kurang dari 11 digit
+            let numbersArray = phoneInput.split(/[\n,]+/)
+                .map(num => num.replace(/[^0-9]/g, '').trim())
+                .filter(num => num.length >= 11);
+
+            if (numbersArray.length === 0) {
+                alert('Tidak ada nomor handphone yang valid (minimal 11 angka).');
                 return;
             }
 
-            // Penyesuaian format nomor untuk API WhatsApp
-            // Jika nomor diawali dengan '0', ubah menjadi '62' (kode negara Indonesia)
-            if (phone.startsWith('0')) {
-                phone = '62' + phone.substring(1);
+            // Mengambil nomor urutan pertama dari array
+            let currentNumber = numbersArray.shift();
+
+            // Mengembalikan sisa nomor ke dalam textarea
+            document.getElementById('phone').value = numbersArray.join('\n');
+
+            // Mengubah teks tombol jika masih ada antrean
+            const submitBtn = document.getElementById('submitBtn');
+            if (numbersArray.length > 0) {
+                submitBtn.innerText = `Kirim ke Nomor Berikutnya (${numbersArray.length} tersisa)`;
+                submitBtn.classList.replace('bg-green-500', 'bg-orange-500');
+                submitBtn.classList.replace('hover:bg-green-600', 'hover:bg-orange-600');
+            } else {
+                submitBtn.innerText = 'Kirim ke Nomor Pertama';
+                submitBtn.classList.replace('bg-orange-500', 'bg-green-500');
+                submitBtn.classList.replace('hover:bg-orange-600', 'hover:bg-green-600');
             }
 
-            // Melakukan encode pada teks pesan agar aman dibaca melalui URL
+            // Penyesuaian format nomor untuk API WhatsApp
+            if (currentNumber.startsWith('0')) {
+                currentNumber = '62' + currentNumber.substring(1);
+            }
+
+            // Melakukan encode pada teks pesan
             let encodedMessage = encodeURIComponent(message);
+            let waUrl = `https://wa.me/${currentNumber}?text=${encodedMessage}`;
 
-            // Membuat URL API WhatsApp (wa.me)
-            let waUrl = `https://wa.me/${phone}?text=${encodedMessage}`;
-
-            // Membuka WhatsApp (aplikasi atau web) di tab baru
+            // Membuka WhatsApp di tab baru
             window.open(waUrl, '_blank');
         });
     </script>

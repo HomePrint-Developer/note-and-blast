@@ -1,0 +1,72 @@
+<!DOCTYPE html>
+<html lang="id">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Kirim Pesan WhatsApp</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+</head>
+
+<body class="bg-gray-100 flex items-center justify-center min-h-screen p-4">
+
+    <div class="bg-white p-8 rounded-lg shadow-md w-full max-w-md">
+        <h2 class="text-2xl font-bold mb-6 text-gray-800 text-center">Kirim Pesan WhatsApp</h2>
+
+        <form id="waForm" class="space-y-4">
+            <div>
+                <label for="message" class="block text-sm font-medium text-gray-700 mb-1">Pesan Chat</label>
+                <textarea id="message" name="message" rows="4" required
+                    placeholder="Tuliskan pesan yang ingin dikirim..."
+                    class="block w-full p-3 border border-gray-300 rounded-md focus:ring-green-500 focus:border-green-500 outline-none transition"></textarea>
+            </div>
+
+            <div>
+                <label for="phone" class="block text-sm font-medium text-gray-700 mb-1">Nomor Handphone</label>
+                <input type="text" id="phone" name="phone" required minlength="11" placeholder="Contoh: 085754207467"
+                    class="block w-full p-3 border border-gray-300 rounded-md focus:ring-green-500 focus:border-green-500 outline-none transition"
+                    oninput="this.value = this.value.replace(/[^0-9]/g, '')">
+                <p class="mt-1 text-xs text-gray-500">Hanya angka. Minimal 11 digit.</p>
+            </div>
+
+            <button type="submit"
+                class="w-full bg-green-500 text-white font-bold py-3 px-4 rounded-md hover:bg-green-600 focus:outline-none focus:ring-2 focus:ring-green-500 focus:ring-offset-2 transition duration-200 mt-4">
+                Lanjut ke WhatsApp
+            </button>
+        </form>
+    </div>
+
+    <script>
+        document.getElementById('waForm').addEventListener('submit', function (e) {
+            // Mencegah form melakukan reload halaman bawaan
+            e.preventDefault();
+
+            let phone = document.getElementById('phone').value;
+            let message = document.getElementById('message').value;
+
+            // Validasi JavaScript tambahan untuk memastikan minimal 11 digit
+            if (phone.length < 11) {
+                alert('Nomor handphone kurang lengkap (minimal 11 angka).');
+                return;
+            }
+
+            // Penyesuaian format nomor untuk API WhatsApp
+            // Jika nomor diawali dengan '0', ubah menjadi '62' (kode negara Indonesia)
+            if (phone.startsWith('0')) {
+                phone = '62' + phone.substring(1);
+            }
+
+            // Melakukan encode pada teks pesan agar aman dibaca melalui URL
+            let encodedMessage = encodeURIComponent(message);
+
+            // Membuat URL API WhatsApp (wa.me)
+            let waUrl = `https://wa.me/${phone}?text=${encodedMessage}`;
+
+            // Membuka WhatsApp (aplikasi atau web) di tab baru
+            window.open(waUrl, '_blank');
+        });
+    </script>
+
+</body>
+
+</html>
